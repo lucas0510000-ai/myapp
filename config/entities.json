@@ -1,0 +1,52 @@
+[
+  {
+    "name": "賴清德",
+    "type": "person",
+    "aliases": ["賴總統", "賴神", "清德"]
+  },
+  {
+    "name": "蕭美琴",
+    "type": "person",
+    "aliases": ["副總統蕭美琴"]
+  },
+  {
+    "name": "柯文哲",
+    "type": "person",
+    "aliases": ["柯P", "柯主席"]
+  },
+  {
+    "name": "侯友宜",
+    "type": "person",
+    "aliases": ["侯市長"]
+  },
+  {
+    "name": "朱立倫",
+    "type": "person",
+    "aliases": ["朱主席"]
+  },
+  {
+    "name": "卓榮泰",
+    "type": "person",
+    "aliases": ["卓揆", "行政院長卓榮泰"]
+  },
+  {
+    "name": "民進黨",
+    "type": "party",
+    "aliases": ["民主進步黨", "綠營", "DPP"]
+  },
+  {
+    "name": "國民黨",
+    "type": "party",
+    "aliases": ["中國國民黨", "藍營", "KMT"]
+  },
+  {
+    "name": "民眾黨",
+    "type": "party",
+    "aliases": ["台灣民眾黨", "白營", "TPP"]
+  },
+  {
+    "name": "時代力量",
+    "type": "party",
+    "aliases": ["時力", "NPP"]
+  }
+]

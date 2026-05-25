@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 政治新聞負面聲量網站
 
 這是一個可以給一般使用者打開看的網站：使用者輸入政治人物或政黨，網站只抓自由時報政治 RSS，再用 AI 判斷新聞文本對該對象的負面框架強度。
@@ -102,3 +103,6 @@ python .\political_news_ai.py run
 政治人物與政黨在 `config/entities.json`。
 
 新聞來源在 `config/sources.json`。目前限定自由時報政治 RSS。
+=======
+# myapp
+>>>>>>> 813f1a1a4f455a2f9d0cb6f9dcc3f2f054d5d2ac

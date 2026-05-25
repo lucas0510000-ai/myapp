@@ -4,17 +4,23 @@
 
 它衡量的是「媒體文本中的負面聲量」，不是民調，也不是人民真實反感度。
 
-## 設定 API key (Google Gemini)
+## 設定 API key (NVIDIA NIM)
 
-本系統目前預設使用 **Google Gemini (gemini-1.5-flash)** 模型，它在 Google AI Studio 提供相當優渥的免費額度。
+本系統目前使用 **NVIDIA NIM (LLama 3.1)** 系列模型。
 
-請不要把 key 寫進程式。用 PowerShell 設環境變數：
+請在專案目錄下建立 `.env` 檔案，內容如下：
 
-```powershell
-$env:GOOGLE_API_KEY="您的 Google API Key"
+```text
+NVIDIA_API_KEY=您的 NVIDIA API Key
+AI_API_BASE=https://integrate.api.nvidia.com/v1
+AI_MODEL=nvidia/llama-3.1-8b-instruct
 ```
 
-如果您尚未取得 Key，請至 [Google AI Studio](https://aistudio.google.com/app/apikey) 申請。
+或者使用 PowerShell 設置環境變數：
+
+```powershell
+$env:NVIDIA_API_KEY="您的 NVIDIA API Key"
+```
 
 ## 執行
 
@@ -29,8 +35,6 @@ python .\web_app.py
 ```text
 http://127.0.0.1:8000
 ```
-
-如果是在 Heroku 或其他雲端平台執行，請確保已設置 `GOOGLE_API_KEY` 環境變數。
 
 ## 常用命令
 

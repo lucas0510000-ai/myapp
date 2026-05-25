@@ -32,7 +32,7 @@ HTML = """<!doctype html>
 </head>
 <body>
   <header class="hero">
-    <div class="brand">政治新聞媒體框架分析系統 <span class="version">v1.0.3</span></div>
+    <div class="brand">政治新聞媒體框架分析系統 <span class="version">v1.0.5</span></div>
     <h1>新聞內容 AI 分析平臺</h1>
     <form id="searchForm" class="search-box">
       <input id="targetInput" type="search" placeholder="輸入政治人物或政黨，例如：賴清德、民眾黨" autocomplete="off" required>
@@ -870,7 +870,7 @@ def check_ai_status():
         
         # 測試 API 連接
         api_base = os.getenv("AI_API_BASE", "https://generativelanguage.googleapis.com/v1beta/models")
-        model = os.getenv("AI_MODEL", "gemini-2.5-flash")
+        model = os.getenv("AI_MODEL", "gemini-1.5-flash")
         endpoint = f"{api_base.rstrip('/')}/{model}:generateContent?key={api_key}"
         
         test_payload = {

@@ -24,7 +24,58 @@ SOURCES_PATH = ROOT / "config" / "sources.json"
 ENTITIES_PATH = ROOT / "config" / "entities.json"
 
 DEFAULT_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-1.5-flash"
+# Runtime-selected model when AI_MODEL is not explicitly set or set to 'auto'
+CURRENT_MODEL = DEFAULT_MODEL
+
+
+def fetch_available_models(api_key=None, api_base=DEFAULT_API_BASE, timeout=10):
+    api_key = api_key or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return []
+    url = f"{api_base.rstrip('/')}?key={api_key}"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return data.get("models", [])
+    except Exception:
+        return []
+
+
+def choose_latest_flash_model(models):
+    names = []
+    for m in models:
+        name = m.get("name", "").replace("models/", "")
+        lname = name.lower()
+        if "gemini" in lname and "flash" in lname and "preview" not in lname and "image" not in lname and "embedding" not in lname:
+            names.append(name)
+    if not names:
+        # fallback to a sensible default
+        return DEFAULT_MODEL
+    # sort descending and pick first (best-effort latest)
+    names = sorted(set(names), reverse=True)
+    return names[0]
+
+
+def refresh_model(api_key=None):
+    """Fetch available models and update CURRENT_MODEL. Returns dict with result."""
+    global CURRENT_MODEL
+    api_key = api_key or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return {"ok": False, "reason": "no_api_key"}
+    models = fetch_available_models(api_key=api_key)
+    if not models:
+        return {"ok": False, "reason": "no_models"}
+    chosen = choose_latest_flash_model(models)
+    CURRENT_MODEL = chosen
+    return {"ok": True, "model": CURRENT_MODEL}
+
+
+def get_current_model():
+    env = os.getenv("AI_MODEL")
+    if env and env.strip().lower() != "auto":
+        return env.strip()
+    return CURRENT_MODEL
 
 
 def now_iso():

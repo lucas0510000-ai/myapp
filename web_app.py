@@ -837,14 +837,11 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Run the public web dashboard.")
-    parser.add_argument("--host", default=os.getenv("HOST", "127.0.0.1"))
-    parser.add_argument("--port", type=int, default=int(os.getenv("PORT", "8000")))
-    args = parser.parse_args(argv)
+    port = int(os.environ.get("PORT", 8000))
 
     engine.init_db()
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
-    print(f"Serving http://{args.host}:{args.port}")
+    server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
+    print(f"Serving http://0.0.0.0:{port}")
     server.serve_forever()
 
 

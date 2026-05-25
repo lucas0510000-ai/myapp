@@ -23,8 +23,8 @@ DB_PATH = DATA_DIR / "news.db"
 SOURCES_PATH = ROOT / "config" / "sources.json"
 ENTITIES_PATH = ROOT / "config" / "entities.json"
 
-DEFAULT_API_BASE = "https://integrate.api.nvidia.com/v1"
-DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
+DEFAULT_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 
 def now_iso():
@@ -355,7 +355,7 @@ def extract_json_object(text):
 
 
 def call_ai(article, entity, api_key, api_base, model, mode="body"):
-    endpoint = api_base.rstrip("/") + "/chat/completions"
+    endpoint = f"{api_base.rstrip('/')}/{model}:generateContent?key={api_key}"
     title = article["title"]
     summary = article["summary"] or ""
     analysis_text = title if mode == "title" else f"{title}\n{summary}".strip()
@@ -395,19 +395,21 @@ JSON shape:
 }}
 """.strip()
     payload = {
-        "model": model,
-        "temperature": 0.1,
-        "max_tokens": 500,
-        "messages": [
-            {"role": "system", "content": "detailed thinking off"},
-            {"role": "user", "content": prompt},
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": prompt}]
+            }
         ],
+        "generationConfig": {
+            "temperature": 0.1,
+            "maxOutputTokens": 500,
+        }
     }
     req = urllib.request.Request(
         endpoint,
         data=json.dumps(payload).encode("utf-8"),
         headers={
-            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         },
@@ -415,7 +417,7 @@ JSON shape:
     )
     with urllib.request.urlopen(req, timeout=60) as response:
         data = json.loads(response.read().decode("utf-8"))
-    content = data["choices"][0]["message"]["content"]
+    content = data["candidates"][0]["content"]["parts"][0]["text"]
     parsed = extract_json_object(content)
     return {
         "entity": entity["name"],
@@ -431,12 +433,12 @@ JSON shape:
 def analyze(limit, use_ai, target=None, force=False, mode="body"):
     init_db()
     entities = load_json(ENTITIES_PATH)
-    api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("NVAPI_KEY") or os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GOOGLE_API_KEY")
     api_base = os.getenv("AI_API_BASE", DEFAULT_API_BASE)
     model = os.getenv("AI_MODEL", DEFAULT_MODEL)
     ai_enabled = use_ai and bool(api_key)
     if use_ai and not api_key:
-        print("No API key env var found; using keyword fallback.")
+        print("No GOOGLE_API_KEY env var found; using keyword fallback.")
 
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row

@@ -96,6 +96,13 @@ HTML = """<!doctype html>
       </div>
     </section>
 
+    <section class="ai-status-section" aria-live="polite">
+      <div id="aiStatus" class="ai-status-indicator">
+        <span class="ai-status-dot"></span>
+        <span id="aiStatusText">檢查 AI 連接中...</span>
+      </div>
+    </section>
+
     <section class="panel">
       <div class="panel-heading">
         <h2>分析摘要</h2>
@@ -357,6 +364,53 @@ output {
   font-size: 22px;
 }
 
+.ai-status-section {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ai-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ai-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #999;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.ai-status-indicator.connected .ai-status-dot {
+  background: var(--green);
+  animation: none;
+}
+
+.ai-status-indicator.error .ai-status-dot {
+  background: var(--danger);
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.status-row strong {
+  display: block;
+  font-size: 22px;
+}
+
 .status-row span,
 .panel-heading span,
 .meta,
@@ -560,6 +614,29 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+async function checkAIStatus() {
+  try {
+    const response = await fetch("/api/ai-status");
+    if (!response.ok) throw new Error("檢查失敗");
+    const data = await response.json();
+    const statusEl = $("aiStatus");
+    const statusText = $("aiStatusText");
+    
+    statusText.textContent = data.message;
+    statusEl.className = "ai-status-indicator";
+    
+    if (data.ai_available) {
+      statusEl.classList.add("connected");
+    } else {
+      statusEl.classList.add("error");
+    }
+  } catch (error) {
+    $("aiStatusText").textContent = `❌ 無法連接 AI：${error.message}`;
+    const statusEl = $("aiStatus");
+    statusEl.className = "ai-status-indicator error";
+  }
 }
 
 function render() {
@@ -779,6 +856,71 @@ def query_dashboard(target=None, source=None, mode=None):
     }
 
 
+def check_ai_status():
+    """檢查 AI API 是否可用"""
+    import urllib.request
+    try:
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            return {
+                "status": "disabled",
+                "message": "未設置 GOOGLE_API_KEY 環境變數",
+                "ai_available": False
+            }
+        
+        # 測試 API 連接
+        api_base = os.getenv("AI_API_BASE", "https://generativelanguage.googleapis.com/v1beta/models")
+        model = os.getenv("AI_MODEL", "gemini-2.5-flash")
+        endpoint = f"{api_base.rstrip('/')}/{model}:generateContent?key={api_key}"
+        
+        test_payload = {
+            "contents": [{"role": "user", "parts": [{"text": "ping"}]}],
+            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 50}
+        }
+        
+        req = urllib.request.Request(
+            endpoint,
+            data=json.dumps(test_payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                response.read()
+            return {
+                "status": "connected",
+                "message": f"✅ AI 連接成功（使用 {model}）",
+                "ai_available": True,
+                "model": model
+            }
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                return {
+                    "status": "rate_limited",
+                    "message": "API 請求限制已達，請稍後再試",
+                    "ai_available": False
+                }
+            elif e.code == 401:
+                return {
+                    "status": "unauthorized",
+                    "message": "❌ API Key 無效或已過期",
+                    "ai_available": False
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": f"API 錯誤：{e.code} {e.reason}",
+                    "ai_available": False
+                }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"❌ AI 連接失敗：{str(e)}",
+            "ai_available": False
+        }
+
+
 def run_refresh(use_ai=True, target=None, source=None, mode=None):
     target = (target or "").strip()
     source = (source or "自由時報政治").strip()
@@ -851,6 +993,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_text(CSS, content_type="text/css; charset=utf-8")
         elif path == "/static/app.js":
             self.send_text(JS, content_type="application/javascript; charset=utf-8")
+        elif path == "/api/ai-status":
+            self.send_json(check_ai_status())
         elif path == "/api/dashboard":
             query = parse_qs(urlparse(self.path).query)
             self.send_json(

@@ -32,8 +32,8 @@ HTML = """<!doctype html>
 </head>
 <body>
   <header class="hero">
-    <div class="brand">自由時報政治新聞 AI 分析 <span class="version">v1.0.3</span></div>
-    <h1>查政治人物或政黨的負面聲量</h1>
+    <div class="brand">政治新聞媒體框架分析系統 <span class="version">v1.0.3</span></div>
+    <h1>新聞內容 AI 分析平臺</h1>
     <form id="searchForm" class="search-box">
       <input id="targetInput" type="search" placeholder="輸入政治人物或政黨，例如：賴清德、民眾黨" autocomplete="off" required>
       <button id="searchButton" class="primary" type="submit" title="搜尋">
@@ -41,7 +41,10 @@ HTML = """<!doctype html>
         <span>搜尋</span>
       </button>
     </form>
-    <p>可切換自由時報或中天新聞。每次更新會盡量收集每個來源最新政治新聞 25 篇，不是固定幾天；判讀代表新聞文本中的正負面框架，不等於民調。</p>
+    <p>本系統分析自由時報或中天新聞的新聞文本框架特徵。每次更新會盡量收集最新新聞內容進行分析；分析判讀基於文本特徵，不等於民調、事實陳述或媒體立場。</p>
+    <div class="disclaimer-header">
+      <strong>⚠️ 重要聲明：</strong> 本網站使用 AI 與文字分析模型進行新聞內容判讀，分析結果僅供研究、資訊參考與技術展示用途。
+    </div>
   </header>
 
   <main>
@@ -120,6 +123,17 @@ HTML = """<!doctype html>
       </div>
       <div id="articles" class="article-list"></div>
     </section>
+
+    <footer class="disclaimer">
+      <h3>完整法律聲明</h3>
+      <div class="disclaimer-content">
+        <p><strong>系統用途：</strong> 本網站使用 AI 與文字分析模型進行新聞內容判讀，分析結果僅供研究、資訊參考與技術展示用途。</p>
+        <p><strong>影響因素：</strong> 分析結果可能受到模型限制、文本語境、關鍵字誤差、資料來源差異等因素影響。</p>
+        <p><strong>不代表以下內容：</strong> 不代表客觀事實、政治立場、媒體意圖或任何投票建議。</p>
+        <p><strong>免責保證：</strong> 本網站不對分析結果之正確性、完整性或適用性提供保證。使用者應自行判斷與查證相關資訊。</p>
+        <p><strong>使用者責任：</strong> 使用者應自行判斷分析結果的可用性與局限性，本網站及其開發者不對使用者基於本分析所做的任何決定及其後果負責。</p>
+      </div>
+    </footer>
   </main>
 
   <script src="/static/app.js"></script>
@@ -461,6 +475,49 @@ tr:last-child td { border-bottom: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+.disclaimer-header {
+  background: rgba(255, 77, 94, 0.1);
+  border: 1px solid rgba(255, 77, 94, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.disclaimer {
+  background: var(--paper-2);
+  border-top: 2px solid var(--line);
+  padding: 24px clamp(16px, 4vw, 40px);
+  margin-top: 32px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.disclaimer h3 {
+  color: var(--ink);
+  font-size: 14px;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.disclaimer-content {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.disclaimer-content p {
+  margin: 0;
+  padding: 0;
+}
+
+.disclaimer strong {
+  color: var(--accent-strong);
+}
 """
 
 
@@ -509,10 +566,10 @@ function render() {
   $("targetName").textContent = state.target || "尚未搜尋";
   $("analysisCount").textContent = state.meta.analysis_count ?? 0;
   $("updatedAt").textContent = formatDate(state.meta.last_analyzed_at);
-  $("modelName").textContent = state.meta.model ? `模型：${state.meta.model}` : "";
+  $("modelName").textContent = state.meta.model ? `🤖 自動生成 | 模型：${state.meta.model}` : "🤖 自動生成";
   $("sourceSelect").value = state.source;
   $("modeSelect").value = state.mode;
-  $("articleSectionTitle").textContent = `${state.source}文章判讀`;
+  $("articleSectionTitle").textContent = `${state.source}文章判讀（由 AI 與關鍵字模型自動分析）`;
 
   $("summaryBody").innerHTML = state.summary.length
     ? state.summary.map((row) => `

@@ -581,8 +581,8 @@ a {{ color: #245a91; }}
 @media (max-width: 760px) {{ .guide {{ grid-template-columns: 1fr; }} }}
 </style>
 <header>
-  <h1>政治新聞負面聲量</h1>
-  <div>Generated at {html.escape(now_iso())}. 這是媒體文本指標，不等於民調或真實民意。</div>
+  <h1>政治新聞媒體文本框架分析</h1>
+  <div>⚠️ <strong>聲明：</strong> 由 AI 與關鍵字模型自動生成。分析結果「僅供參考」，不代表事實、民調、民意或任何政治立場。Generated at {html.escape(now_iso())}。</div>
 </header>
 <main>
   <section class="guide" aria-label="指標說明">

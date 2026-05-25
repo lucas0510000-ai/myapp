@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import argparse
 import io
 import json
@@ -870,7 +873,7 @@ def check_ai_status():
         
         # 測試 API 連接 (使用 NVIDIA/OpenAI 格式)
         api_base = os.getenv("AI_API_BASE", "https://integrate.api.nvidia.com/v1")
-        model = os.getenv("AI_MODEL", "nvidia/llama-3.1-8b-instruct")
+        model = os.getenv("AI_MODEL", "nvidia/nemotron-3-super-120b-a12b")
         endpoint = f"{api_base.rstrip('/')}/chat/completions"
         
         test_payload = {
@@ -890,7 +893,7 @@ def check_ai_status():
         )
         
         try:
-            with urllib.request.urlopen(req, timeout=10) as response:
+            with urllib.request.urlopen(req, timeout=25) as response:
                 response.read()
             return {
                 "status": "connected",

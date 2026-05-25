@@ -14,6 +14,9 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 ROOT = Path(__file__).resolve().parent
@@ -24,7 +27,7 @@ SOURCES_PATH = ROOT / "config" / "sources.json"
 ENTITIES_PATH = ROOT / "config" / "entities.json"
 
 DEFAULT_API_BASE = "https://integrate.api.nvidia.com/v1"
-DEFAULT_MODEL = "nvidia/llama-3.1-8b-instruct"
+DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
 # Runtime-selected model when AI_MODEL is not explicitly set or set to 'auto'
 CURRENT_MODEL = DEFAULT_MODEL
 

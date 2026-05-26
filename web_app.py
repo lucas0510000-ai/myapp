@@ -873,7 +873,7 @@ def check_ai_status():
         
         # 測試 API 連接 (使用 NVIDIA/OpenAI 格式)
         api_base = os.getenv("AI_API_BASE", "https://integrate.api.nvidia.com/v1")
-        model = os.getenv("AI_MODEL", "meta-llama/llama-3.1-8b-instruct")
+        model = os.getenv("AI_MODEL", "meta/llama-3.1-8b-instruct")
         endpoint = f"{api_base.rstrip('/')}/chat/completions"
         
         test_payload = {

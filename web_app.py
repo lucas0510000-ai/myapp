@@ -32,6 +32,14 @@ HTML = """<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>新聞內容 AI 分析平臺</title>
   <link rel="stylesheet" href="/static/app.css">
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TR9J54CMEZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-TR9J54CMEZ');
+  </script>
 </head>
 <body>
   <header class="hero">

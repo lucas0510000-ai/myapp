@@ -27,7 +27,7 @@ SOURCES_PATH = ROOT / "config" / "sources.json"
 ENTITIES_PATH = ROOT / "config" / "entities.json"
 
 DEFAULT_API_BASE = "https://integrate.api.nvidia.com/v1"
-DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
+DEFAULT_MODEL = "meta-llama/llama-3.1-8b-instruct"
 # Runtime-selected model when AI_MODEL is not explicitly set or set to 'auto'
 CURRENT_MODEL = DEFAULT_MODEL
 

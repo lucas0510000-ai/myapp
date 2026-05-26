@@ -30,7 +30,7 @@ HTML = """<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>自由時報政治新聞 AI 分析</title>
+  <title>新聞內容 AI 分析平臺</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>

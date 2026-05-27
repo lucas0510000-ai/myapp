@@ -750,7 +750,7 @@ function render() {
           <p class="meta">${escapeHtml(item.source)} · ${escapeHtml(item.published || "")}</p>
           <p><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></p>
           <p class="reason">${escapeHtml(item.reason || "")}</p>
-          <p class="evidence">${escapeHtml(item.evidence || "")}</p>
+          <p class="evidence">${item.summary ? item.summary : escapeHtml(item.evidence || "")}</p>
         </div>
       </article>
     `).join("")
@@ -763,7 +763,7 @@ function render() {
               <h3>${escapeHtml(item.source)}</h3>
               <p class="meta">${escapeHtml(item.published || "")}</p>
               <p><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></p>
-              <p class="evidence">${escapeHtml(item.summary || "")}</p>
+              <p class="evidence">${item.summary || escapeHtml("")}</p>
             </div>
           </article>
         `).join("")}
@@ -998,6 +998,14 @@ def query_dashboard(target=None, source=None, mode=None):
             "mode": mode,
         }
 
+    def highlight_keyword(text, keyword):
+        """在文本中高亮關鍵字 (用紅色標示)"""
+        if not text or not keyword:
+            return text
+        import re
+        pattern = re.compile(re.escape(keyword), re.IGNORECASE)
+        return pattern.sub(f'<span style="color: red; font-weight: bold;">{keyword}</span>', text)
+
     where = "WHERE x.entity = ? AND a.source = ?"
     params = [target, source]
 
@@ -1020,7 +1028,7 @@ def query_dashboard(target=None, source=None, mode=None):
             f"""
             SELECT x.entity, x.entity_type, x.negative_score, x.sentiment,
                    x.confidence, x.evidence, x.reason, x.model, x.analyzed_at,
-                   a.title, a.url, a.source, a.published
+                   a.title, a.url, a.source, a.published, a.summary
             FROM analyses x
             JOIN articles a ON a.id = x.article_id
             {where}
@@ -1029,6 +1037,15 @@ def query_dashboard(target=None, source=None, mode=None):
             """,
             params,
         ).fetchall()
+        
+        # 高亮文章摘要中的關鍵字
+        highlighted_articles = []
+        for row in articles:
+            article_dict = dict(row)
+            if article_dict.get("summary"):
+                article_dict["summary"] = highlight_keyword(article_dict["summary"], target)
+            highlighted_articles.append(article_dict)
+        
         fallback_articles = []
         if not articles:
             fallback_articles = conn.execute(
@@ -1041,6 +1058,15 @@ def query_dashboard(target=None, source=None, mode=None):
                 """,
                 (source,),
             ).fetchall()
+            # 高亮 fallback 文章的摘要
+            highlighted_fallback = []
+            for row in fallback_articles:
+                article_dict = dict(row)
+                if article_dict.get("summary"):
+                    article_dict["summary"] = highlight_keyword(article_dict["summary"], target)
+                highlighted_fallback.append(article_dict)
+            fallback_articles = highlighted_fallback
+        
         meta = conn.execute(
             f"""
             SELECT
@@ -1053,8 +1079,8 @@ def query_dashboard(target=None, source=None, mode=None):
         ).fetchone()
     return {
         "summary": [dict(row) for row in summary],
-        "articles": [dict(row) for row in articles],
-        "fallback_articles": [dict(row) for row in fallback_articles],
+        "articles": highlighted_articles,
+        "fallback_articles": fallback_articles,
         "meta": dict(meta),
         "job": JOB_STATE,
         "target": target,

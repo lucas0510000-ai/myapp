@@ -40,6 +40,16 @@ HTML = """<!doctype html>
     gtag('js', new Date());
     gtag('config', 'G-TR9J54CMEZ');
   </script>
+  <style>
+    .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
+    .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
+    .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .close:hover { color: black; }
+    #feedbackForm { display: flex; flex-direction: column; gap: 10px; }
+    #feedbackForm input, #feedbackForm textarea { padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    #feedbackForm button { padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    #feedbackForm button:hover { background-color: #0056b3; }
+  </style>
 </head>
 <body>
   <header class="hero">
@@ -142,6 +152,20 @@ HTML = """<!doctype html>
       <div id="articles" class="article-list"></div>
     </section>
 
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <span class="close" onclick="closeFeedbackModal()">&times;</span>
+        <h2>意見反饋</h2>
+        <form id="feedbackForm">
+          <input type="text" id="feedbackName" placeholder="您的名字" required>
+          <input type="email" id="feedbackEmail" placeholder="您的 Email" required>
+          <textarea id="feedbackMessage" placeholder="請分享您的意見或建議..." required style="min-height:120px;"></textarea>
+          <button type="submit" class="primary">提交意見</button>
+        </form>
+      </div>
+    </div>
+
     <footer class="disclaimer">
       <h3>完整法律聲明</h3>
       <div class="disclaimer-content">
@@ -151,8 +175,54 @@ HTML = """<!doctype html>
         <p><strong>免責保證：</strong> 本網站不對分析結果之正確性、完整性或適用性提供保證。使用者應自行判斷與查證相關資訊。</p>
         <p><strong>使用者責任：</strong> 使用者應自行判斷分析結果的可用性與局限性，本網站及其開發者不對使用者基於本分析所做的任何決定及其後果負責。</p>
       </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button type="button" class="primary" onclick="openFeedbackModal()" style="padding: 10px 20px;">💬 意見反饋</button>
+      </div>
     </footer>
   </main>
+
+  <script>
+    function openFeedbackModal() {
+      document.getElementById('feedbackModal').style.display = 'block';
+    }
+    
+    function closeFeedbackModal() {
+      document.getElementById('feedbackModal').style.display = 'none';
+    }
+    
+    document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('feedbackName').value;
+      const email = document.getElementById('feedbackEmail').value;
+      const message = document.getElementById('feedbackMessage').value;
+      
+      try {
+        const response = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, message })
+        });
+        const result = await response.json();
+        if (result.ok) {
+          alert('感謝您的意見！');
+          document.getElementById('feedbackForm').reset();
+          closeFeedbackModal();
+        } else {
+          alert('提交失敗：' + result.reason);
+        }
+      } catch (err) {
+        alert('錯誤：' + err.message);
+      }
+    });
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(e) {
+      const modal = document.getElementById('feedbackModal');
+      if (e.target === modal) {
+        closeFeedbackModal();
+      }
+    });
+  </script>
 
   <script src="/static/app.js"></script>
 </body>
@@ -1026,6 +1096,36 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
+        
+        # 處理意見反饋
+        if path == "/api/feedback":
+            length = int(self.headers.get("Content-Length") or 0)
+            try:
+                body = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
+                name = body.get("name", "").strip()
+                email = body.get("email", "").strip()
+                message = body.get("message", "").strip()
+                
+                if not all([name, email, message]):
+                    self.send_json({"ok": False, "reason": "missing fields"}, status=HTTPStatus.BAD_REQUEST)
+                    return
+                
+                # 存到資料庫
+                import sqlite3
+                from datetime import datetime
+                db_path = engine.DB_PATH
+                with sqlite3.connect(db_path) as conn:
+                    conn.execute(
+                        "INSERT INTO feedback (name, email, message, submitted_at) VALUES (?, ?, ?, ?)",
+                        (name, email, message, datetime.now().isoformat())
+                    )
+                    conn.commit()
+                
+                self.send_json({"ok": True, "reason": "feedback received"}, status=HTTPStatus.OK)
+            except Exception as e:
+                self.send_json({"ok": False, "reason": str(e)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+        
         if path != "/api/refresh":
             self.send_json({"error": "not found"}, status=HTTPStatus.NOT_FOUND)
             return

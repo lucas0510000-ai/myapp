@@ -154,6 +154,17 @@ def init_db():
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                message TEXT NOT NULL,
+                submitted_at TEXT NOT NULL
+            )
+            """
+        )
 
 
 def parse_rss_items(xml_bytes):

@@ -851,6 +851,132 @@ loadData().catch((error) => {
 """
 
 
+ADMIN_HTML = """<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>管理員面板 - 新聞內容 AI 分析平臺</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h1 { color: #333; }
+    .login-form { background: white; padding: 20px; border-radius: 8px; max-width: 300px; }
+    .login-form input { display: block; width: 100%; margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    .login-form button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+    .login-form button:hover { background: #0056b3; }
+    .feedback-table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; border-radius: 8px; }
+    .feedback-table th, .feedback-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    .feedback-table th { background: #007bff; color: white; }
+    .feedback-table tr:hover { background: #f9f9f9; }
+    .logout-btn { background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; }
+    .logout-btn:hover { background: #c82333; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>管理員面板</h1>
+    
+    <div id="loginDiv" class="login-form">
+      <h2>登入</h2>
+      <input type="password" id="adminToken" placeholder="輸入管理員密碼" />
+      <button onclick="login()">登入</button>
+    </div>
+    
+    <div id="dashboardDiv" class="hidden">
+      <button class="logout-btn" onclick="logout()">登出</button>
+      <h2>用戶意見反饋</h2>
+      <table class="feedback-table">
+        <thead>
+          <tr>
+            <th>時間</th>
+            <th>名字</th>
+            <th>Email</th>
+            <th>意見</th>
+          </tr>
+        </thead>
+        <tbody id="feedbackTableBody">
+          <tr><td colspan="4" style="text-align: center;">加載中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <script>
+    const token = localStorage.getItem('adminToken');
+    
+    function login() {
+      const input = document.getElementById('adminToken');
+      const pwd = input.value.trim();
+      if (!pwd) {
+        alert('請輸入密碼');
+        return;
+      }
+      
+      fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: pwd })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          localStorage.setItem('adminToken', pwd);
+          showDashboard();
+          loadFeedback();
+        } else {
+          alert('密碼錯誤');
+        }
+      })
+      .catch(e => alert('錯誤：' + e.message));
+    }
+    
+    function logout() {
+      localStorage.removeItem('adminToken');
+      location.reload();
+    }
+    
+    function showDashboard() {
+      document.getElementById('loginDiv').classList.add('hidden');
+      document.getElementById('dashboardDiv').classList.remove('hidden');
+    }
+    
+    function loadFeedback() {
+      const token = localStorage.getItem('adminToken');
+      fetch('/api/feedback/list?token=' + encodeURIComponent(token))
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok && data.feedback) {
+            const tbody = document.getElementById('feedbackTableBody');
+            tbody.innerHTML = data.feedback.map(f => `
+              <tr>
+                <td>${new Date(f.submitted_at).toLocaleString('zh-TW')}</td>
+                <td>${f.name}</td>
+                <td>${f.email}</td>
+                <td>${f.message}</td>
+              </tr>
+            `).join('');
+            if (data.feedback.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">尚無意見反饋</td></tr>';
+            }
+          } else {
+            alert('加載失敗：' + (data.reason || '未知錯誤'));
+          }
+        })
+        .catch(e => alert('錯誤：' + e.message));
+    }
+    
+    if (token) {
+      showDashboard();
+      loadFeedback();
+    }
+  </script>
+</body>
+</html>
+"""
+
+
 def query_dashboard(target=None, source=None, mode=None):
     engine.init_db()
     target = (target or "").strip()
@@ -1074,6 +1200,8 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/":
             self.send_text(HTML, content_type="text/html; charset=utf-8")
+        elif path == "/admin":
+            self.send_text(ADMIN_HTML, content_type="text/html; charset=utf-8")
         elif path == "/static/app.css":
             self.send_text(CSS, content_type="text/css; charset=utf-8")
         elif path == "/static/app.js":
@@ -1089,6 +1217,26 @@ class Handler(BaseHTTPRequestHandler):
                     mode=query.get("mode", ["body"])[0],
                 )
             )
+        elif path == "/api/feedback/list":
+            # 驗證管理員 token
+            query = parse_qs(urlparse(self.path).query)
+            token = query.get("token", [""])[0]
+            admin_token = os.getenv("ADMIN_TOKEN")
+            if not admin_token or token != admin_token:
+                self.send_json({"ok": False, "reason": "unauthorized"}, status=HTTPStatus.UNAUTHORIZED)
+                return
+            
+            # 查詢所有意見
+            try:
+                import sqlite3
+                db_path = engine.DB_PATH
+                with sqlite3.connect(db_path) as conn:
+                    conn.row_factory = sqlite3.Row
+                    rows = conn.execute("SELECT * FROM feedback ORDER BY submitted_at DESC").fetchall()
+                    feedback = [dict(row) for row in rows]
+                self.send_json({"ok": True, "feedback": feedback})
+            except Exception as e:
+                self.send_json({"ok": False, "reason": str(e)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
         elif path == "/api/job":
             self.send_json(JOB_STATE)
         else:
@@ -1122,6 +1270,23 @@ class Handler(BaseHTTPRequestHandler):
                     conn.commit()
                 
                 self.send_json({"ok": True, "reason": "feedback received"}, status=HTTPStatus.OK)
+            except Exception as e:
+                self.send_json({"ok": False, "reason": str(e)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+        
+        # 處理管理員登入
+        if path == "/api/admin/login":
+            length = int(self.headers.get("Content-Length") or 0)
+            try:
+                body = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
+                token = body.get("token", "").strip()
+                admin_token = os.getenv("ADMIN_TOKEN")
+                
+                if not admin_token or token != admin_token:
+                    self.send_json({"ok": False, "reason": "invalid token"}, status=HTTPStatus.UNAUTHORIZED)
+                    return
+                
+                self.send_json({"ok": True, "reason": "authenticated"}, status=HTTPStatus.OK)
             except Exception as e:
                 self.send_json({"ok": False, "reason": str(e)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
             return
